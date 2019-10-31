@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-br" xml:lang="pt-br">
+    <head>
+        <style>
+            body {
+                background-color: #EEEEEE;
+                font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif
+            }
+            table, td {
+                border: 1px solid black;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            td {
+                background-color: #fff;
+                height: 1.5em;
+                text-align: left;
+                vertical-align: top;
+                padding: 1ex;
+
+                /*text-transform: capitalize;*/
+            }
+            tr:hover td {
+                background-color: rgb(220, 220, 220);
+            }
+            td:first-letter {
+                text-transform: uppercase;
+            }
+            td:nth-child(2) {
+                width: 50%;
+                text-align: justify;
+            }
+            td:nth-child(4) {
+                white-space: nowrap;
+            }
+            .tableDiv {
+                width: 80vw;
+                margin: auto;
+            }
+            .loading {
+                text-align: center;
+                font-size: x-large;
+                animation: blinker 1.5s linear infinite;
+            }
+            a:link, a:visited {
+                background-color: salmon;
+                -webkit-border-radius: 8px;
+                -moz-border-radius: 8px;
+                border-radius: 8px;
+                color: white;
+                padding: 5px 10px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+            }
+
+            a:hover, a:active {
+                background-color: rgb(250, 70, 70);
+            }
+
+            @keyframes blinker {
+                50% {
+                    opacity: 0;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class='tableDiv'></div>
+    </body>
+    <script>
+        const sidraAPI = 'http://api.sidra.ibge.gov.br/values'
+        const div = document.querySelector('.tableDiv')
+        const table = document.createElement('table')
+        const loading = document.createElement('p')
+        const loading_text = document.createTextNode('Carregando')
+        
+
+        loading.setAttribute('class', 'loading')
+        loading.appendChild(loading_text)
+        div.appendChild(loading)
+        
+
+        const indexes = [
+            {
+                name: 'inpc',
+                api: sidraAPI,
+                table: 1100,
+                queryParams: '/t/1100/n1/all/v/2292/p/last 1/c315/7169'
+            },
+            {
+                name: 'ipca_acumulado_12_meses',
+                api: sidraAPI,
+                table: 1419,
+                queryParams: '/t/1419/n1/all/v/2265/p/last 1/c315/7169'
+            },
+            {
+                name: 'ipca_mensal',
+                api: sidraAPI,
+                table: 1419,
+                queryParams: '/t/1419/n1/all/v/63/p/last 1/c315/7169'
+            },
+            {
+                name: 'desocupacao_brasil',
+                api: sidraAPI,
+                table: 6381,
+                queryParams: '/t/6381/n1/all/v/4099/p/last 1'
+            }
+
+        ]
+    
+        class ApiRequest {
+            constructor({ table, api, queryParams }) {
+                this.queryParams = queryParams;
+                this.api = api
+                this.table = table
+                return (async () => {
+                    let res = await this.queryIndex()
+                    this.data = this.parseResponse(res)
+                    return this
+                })()
+            }
+
+            parseResponse(response) {
+                const respData = JSON.parse(response)
+                if (respData.error) return respData
+
+                let [,r] = respData
+                let { V: value, D2N: title, D3N: month, MN: measureUnit } = r
+                const data = {
+                    table: 'Tabela ' + this.table,
+                    title,
+                    month,
+                    value: `${value} ${measureUnit}`,
+                }
+                return data
+            }
+
+            queryIndex() {
+                return new Promise(resolve => {
+                    let xhttp = new XMLHttpRequest();
+                    let url = this.api + this.queryParams
+                    xhttp.open('GET', url, true)
+                    xhttp.onload = function(e) {
+                        resolve(xhttp.response)
+                    }
+                    // xhttp.timeout = 3000
+                    // xhttp.ontimeout = function () {
+                    //     resolve('{"error": "** Timed out!"}')
+                    //     console.error("** Timed out!")
+                    // }
+                    xhttp.onerror = function () {
+                        resolve('{"error": "** An error occurred during the XMLHttpRequest"}')
+                        console.error("** An error occurred during the XMLHttpRequest")
+                    }
+                    //xhttp.onreadystatechange = this.requestCallback(xhttp)
+                    xhttp.send()
+                })
+            }
+        }
+
+
+        const requests = indexes.map(index => new ApiRequest(index))
+    
+        Promise
+            .all(requests)
+            .then(responses => responses.forEach(index => {
+                if (index.error) {
+                    const tr = document.createElement('tr')
+                    const textNode = document.createTextNode(index.error)    
+                    tr.appendChild(textNode)
+                    table.appendChild(tr)
+                    return
+                }
+
+                const index_data = Object.entries(index.data)
+
+                const tr = document.createElement('tr')
+
+                const tds = index_data.map(d => {
+                    const td = document.createElement('td')
+                    const textNode = document.createTextNode(d[1])
+
+                    if (d[0] == 'table') {
+                        const a = document.createElement('a')
+                        a.setAttribute('href', `https://sidra.ibge.gov.br/tabela/${index.table}`)
+                        a.setAttribute('target', '_blank')
+                        a.appendChild(textNode)
+                        td.appendChild(a)
+                    } else {
+                        td.appendChild(textNode)
+                    }
+
+                    return td
+                })
+                
+                tds.forEach(td => tr.appendChild(td))
+                table.appendChild(tr)
+            }))
+            .then(() => {     
+                div.appendChild(table)
+                div.removeChild(loading)
+            })
+    </script>
+</html>
