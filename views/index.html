@@ -69,7 +69,7 @@
     </head>
     <body>
         <div class='title'>
-            <h1>Desenvolvido por *************</h1>
+            <!--<h1>Desenvolvido por Malinhah1>-->
         </div>
         <div class='tableDiv'></div>
     </body>
@@ -146,7 +146,6 @@
                     let xhttp = new XMLHttpRequest();
                     let url = this.api + this.queryParams
                     xhttp.open('GET', url, true)
-                    xhttp.withCredentials = true
                     xhttp.onload = function(e) {
                         resolve(xhttp.response)
                     }
