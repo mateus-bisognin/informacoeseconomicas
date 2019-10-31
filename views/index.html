@@ -143,6 +143,7 @@
                     let xhttp = new XMLHttpRequest();
                     let url = this.api + this.queryParams
                     xhttp.open('GET', url, true)
+                    xhttp.withCredentials = true
                     xhttp.onload = function(e) {
                         resolve(xhttp.response)
                     }
